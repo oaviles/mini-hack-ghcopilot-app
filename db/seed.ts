@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { createDatabase, type Database } from '../src/lib/db';
 import { categories, games, publishers } from './schema';
@@ -72,8 +72,9 @@ export async function seedDatabase(db: Database, csvPath: string = join(here, 'g
     }
 }
 
-// Allow running directly: `tsx db/seed.ts`
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Cross-platform guard: compare resolved filesystem paths rather than raw URL strings
+// because import.meta.url uses forward-slash URLs while process.argv[1] is OS-native.
+if (fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
     const db = createDatabase();
     seedDatabase(db)
         .then(() => {
