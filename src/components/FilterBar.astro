@@ -1,0 +1,80 @@
+---
+import type { Category, Publisher } from '../types/game';
+
+/**
+ * Renders category and publisher filter pills for the game listing page.
+ * The actual show/hide logic runs client-side via the script in index.astro.
+ *
+ * @property categories List of all distinct game categories (sorted by name).
+ * @property publishers List of all distinct game publishers (sorted by name).
+ */
+interface Props {
+    categories: Category[];
+    publishers: Publisher[];
+}
+
+const { categories, publishers } = Astro.props;
+
+const activePillBase = 'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 focus:ring-2 focus:outline-none';
+const inactivePill = `${activePillBase} bg-slate-700 text-slate-300 hover:bg-slate-600 focus:ring-blue-500`;
+const activeCategoryPill = `${activePillBase} bg-blue-600 text-white focus:ring-blue-500`;
+const activePublisherPill = `${activePillBase} bg-purple-600 text-white focus:ring-purple-500`;
+---
+
+<div class="mb-8" data-testid="filter-bar" aria-label="Filter games">
+    <div class="flex flex-col sm:flex-row flex-wrap gap-4">
+
+        <!-- Category filter group -->
+        <div
+            class="flex flex-wrap items-center gap-2"
+            data-testid="category-filter-group"
+            role="group"
+            aria-label="Filter by category"
+        >
+            <span class="text-sm font-medium text-slate-400 shrink-0">Category:</span>
+            <button
+                type="button"
+                class={activeCategoryPill}
+                data-filter-category="all"
+                data-testid="category-filter-all"
+                aria-pressed="true"
+            >All</button>
+            {categories.map((cat) => (
+                <button
+                    type="button"
+                    class={inactivePill}
+                    data-filter-category={String(cat.id)}
+                    data-testid={`category-filter-${cat.id}`}
+                    aria-pressed="false"
+                >{cat.name}</button>
+            ))}
+        </div>
+
+        <!-- Publisher filter group -->
+        <div
+            class="flex flex-wrap items-center gap-2"
+            data-testid="publisher-filter-group"
+            role="group"
+            aria-label="Filter by publisher"
+        >
+            <span class="text-sm font-medium text-slate-400 shrink-0">Publisher:</span>
+            <button
+                type="button"
+                class={activePublisherPill}
+                data-filter-publisher="all"
+                data-testid="publisher-filter-all"
+                aria-pressed="true"
+            >All</button>
+            {publishers.map((pub) => (
+                <button
+                    type="button"
+                    class={inactivePill}
+                    data-filter-publisher={String(pub.id)}
+                    data-testid={`publisher-filter-${pub.id}`}
+                    aria-pressed="false"
+                >{pub.name}</button>
+            ))}
+        </div>
+
+    </div>
+</div>
