@@ -20,6 +20,13 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments & Documentation Philosophy
+
+- Comment **intent and decisions**, not mechanics. Explain *why* code exists or a non-obvious tradeoff, not *what* an obvious line does.
+- Remove comments that merely restate code.
+- Keep comments current. If a code change invalidates a comment, update or delete it in the same change.
+- Prefer fewer, high-signal comments over frequent inline narration.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
