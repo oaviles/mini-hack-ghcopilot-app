@@ -6,6 +6,8 @@ import {
     getAllGames,
     getAllGameIds,
     getGameById,
+    getAllCategories,
+    getAllPublishers,
 } from './games';
 
 async function seedGames(db: Database, count: number): Promise<void> {
@@ -62,5 +64,65 @@ describe('games data-access helpers', () => {
     it('returns null for a non-existent game', async () => {
         await seedGames(db, 2);
         expect(await getGameById(db, 99999)).toBeNull();
+    });
+});
+
+describe('getAllCategories', () => {
+    let db: Database;
+
+    beforeEach(async () => {
+        db = await createTestDatabase();
+    });
+
+    it('returns an empty list when no categories exist', async () => {
+        const result = await getAllCategories(db);
+        expect(result).toEqual([]);
+    });
+
+    it('returns categories ordered by name', async () => {
+        await db.insert(categories).values([
+            { name: 'Strategy', description: 'strat' },
+            { name: 'Puzzle', description: 'puzz' },
+            { name: 'Arcade', description: 'arc' },
+        ]);
+        const result = await getAllCategories(db);
+        expect(result.map((c) => c.name)).toEqual(['Arcade', 'Puzzle', 'Strategy']);
+    });
+
+    it('returns objects with id and name fields', async () => {
+        await db.insert(categories).values({ name: 'Simulation', description: 'sim' });
+        const result = await getAllCategories(db);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({ id: expect.any(Number), name: 'Simulation' });
+    });
+});
+
+describe('getAllPublishers', () => {
+    let db: Database;
+
+    beforeEach(async () => {
+        db = await createTestDatabase();
+    });
+
+    it('returns an empty list when no publishers exist', async () => {
+        const result = await getAllPublishers(db);
+        expect(result).toEqual([]);
+    });
+
+    it('returns publishers ordered by name', async () => {
+        await db.insert(publishers).values([
+            { name: 'Zephyr Studios', description: 'z' },
+            { name: 'Alpha Games', description: 'a' },
+            { name: 'MidTier Inc.', description: 'm' },
+        ]);
+        const result = await getAllPublishers(db);
+        expect(result.map((p) => p.name)).toEqual(['Alpha Games', 'MidTier Inc.', 'Zephyr Studios']);
+    });
+
+    it('returns objects with id and name fields', async () => {
+        await db.insert(publishers).values({ name: 'CodeForge Studios', description: 'cf' });
+        const result = await getAllPublishers(db);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({ id: expect.any(Number), name: 'CodeForge Studios' });
     });
 });

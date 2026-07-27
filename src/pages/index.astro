@@ -1,14 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import GameCard from '../components/GameCard.astro';
+import FilterBar from '../components/FilterBar.astro';
 import PageHero from '../components/PageHero.astro';
 import EmptyState from '../components/EmptyState.astro';
 import { getDatabase } from '../lib/db';
-import { getAllGames } from '../lib/games';
+import { getAllGames, getAllCategories, getAllPublishers } from '../lib/games';
 
 export const prerender = true;
 
-const games = await getAllGames(getDatabase());
+const db = getDatabase();
+const [games, categories, publishers] = await Promise.all([
+    getAllGames(db),
+    getAllCategories(db),
+    getAllPublishers(db),
+]);
 ---
 
 <Layout title="Tailspin Toys - Crowdfunding your new favorite game!">
@@ -21,13 +27,114 @@ const games = await getAllGames(getDatabase());
     <div>
       <h2 class="text-2xl font-medium mb-6 text-slate-100">Featured Games</h2>
 
+      {games.length > 0 && (
+        <FilterBar categories={categories} publishers={publishers} />
+      )}
+
       {games.length === 0 ? (
         <EmptyState text="No games available at the moment." />
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
-          {games.map((game) => <GameCard game={game} />)}
-        </div>
+        <>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
+            {games.map((game) => <GameCard game={game} />)}
+          </div>
+          <div data-testid="filter-no-match" class="hidden">
+            <EmptyState text="No games match the selected filters." />
+          </div>
+        </>
       )}
     </div>
   </div>
 </Layout>
+
+<script>
+  // Client-side filtering: show/hide game cards based on active category and publisher selections.
+  const filterBar = document.querySelector<HTMLElement>('[data-testid="filter-bar"]');
+  const gamesGrid = document.querySelector<HTMLElement>('[data-testid="games-grid"]');
+  const noMatchEl = document.querySelector<HTMLElement>('[data-testid="filter-no-match"]');
+
+  if (filterBar && gamesGrid) {
+    // Capture as non-null so nested functions can reference them without null-checks.
+    const bar: HTMLElement = filterBar;
+    const grid: HTMLElement = gamesGrid;
+
+    const gameCards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-testid="game-card"]')
+    );
+
+    // Active filter state — null means "All" (no constraint).
+    let activeCategoryId: string | null = null;
+    let activePublisherId: string | null = null;
+
+    // Class sets for active/inactive pill states.
+    const CAT_ACTIVE = ['bg-blue-600', 'text-white'];
+    const PUB_ACTIVE = ['bg-purple-600', 'text-white'];
+    const INACTIVE = ['bg-slate-700', 'text-slate-300', 'hover:bg-slate-600'];
+
+    function applyFilters(): void {
+      let visibleCount = 0;
+
+      for (const card of gameCards) {
+        const categoryId = card.dataset.categoryId ?? '';
+        const publisherId = card.dataset.publisherId ?? '';
+
+        const categoryMatch = activeCategoryId === null || categoryId === activeCategoryId;
+        const publisherMatch = activePublisherId === null || publisherId === activePublisherId;
+
+        const visible = categoryMatch && publisherMatch;
+        card.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+      }
+
+      // Toggle the no-match empty state vs. the grid.
+      if (noMatchEl) {
+        noMatchEl.classList.toggle('hidden', visibleCount > 0);
+      }
+      grid.style.display = visibleCount === 0 ? 'none' : '';
+    }
+
+    function updatePillState(
+      group: 'category' | 'publisher',
+      selectedValue: string | null
+    ): void {
+      const attr = group === 'category' ? 'data-filter-category' : 'data-filter-publisher';
+      const activeClasses = group === 'category' ? CAT_ACTIVE : PUB_ACTIVE;
+      const buttons = bar.querySelectorAll<HTMLButtonElement>(`[${attr}]`);
+
+      for (const btn of Array.from(buttons)) {
+        const val = btn.getAttribute(attr);
+        const isActive = selectedValue === null ? val === 'all' : val === selectedValue;
+
+        btn.setAttribute('aria-pressed', String(isActive));
+        if (isActive) {
+          btn.classList.remove(...INACTIVE);
+          btn.classList.add(...activeClasses);
+        } else {
+          btn.classList.remove(...activeClasses);
+          btn.classList.add(...INACTIVE);
+        }
+      }
+    }
+
+    bar.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+
+      const catBtn = target.closest<HTMLButtonElement>('[data-filter-category]');
+      if (catBtn) {
+        const val = catBtn.getAttribute('data-filter-category');
+        activeCategoryId = val === 'all' ? null : val;
+        updatePillState('category', activeCategoryId);
+        applyFilters();
+        return;
+      }
+
+      const pubBtn = target.closest<HTMLButtonElement>('[data-filter-publisher]');
+      if (pubBtn) {
+        const val = pubBtn.getAttribute('data-filter-publisher');
+        activePublisherId = val === 'all' ? null : val;
+        updatePillState('publisher', activePublisherId);
+        applyFilters();
+      }
+    });
+  }
+</script>
