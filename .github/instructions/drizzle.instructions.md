@@ -55,6 +55,27 @@ export async function getAllGameIds(db: Database): Promise<number[]> {
 - Map raw rows to the app-facing `Game`/`Publisher`/`Category` types in one place; don't leak Drizzle row shapes into components.
 - Keep ordering/lookup logic in `games.ts`, not in pages.
 
+## Documentation Requirements (db/ and src/lib/)
+
+Every **exported function** in `db/**/*.ts` and `src/lib/*.ts` must include TSDoc/JSDoc that covers:
+
+- Purpose/intent of the function
+- `@param` for each parameter
+- `@returns` describing the return value
+
+When a helper accepts an injectable database instance, explicitly document the `db` parameter so the testing contract is obvious.
+
+```ts
+/**
+ * Returns all game ids ordered by title for deterministic static path generation.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @returns A title-sorted list of game ids.
+ */
+export async function getAllGameIds(db: Database): Promise<number[]> {
+  // ...
+}
+```
+
 ## Determinism
 
 Seed-derived values must be reproducible across builds. Derive star ratings from a stable hash of the title (`ratingFromTitle`) — **never** `Math.random()`.
@@ -66,4 +87,3 @@ Unit-test transforms directly and helpers against `createTestDatabase()`. See [`
 ## Type checking
 
 The data layer (`db/**/*.ts`, `src/lib/*.ts`) is type-checked by `npm run typecheck`, which runs the native **TypeScript 7** compiler (`tsgo`, from `@typescript/native-preview`) against `tsconfig.tsgo.json`. Keep helpers exported with explicit parameter and return types so `tsgo` can verify them. Linting is unaffected — ESLint + `typescript-eslint` still run on the classic `typescript` package.
-
