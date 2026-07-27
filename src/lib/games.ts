@@ -1,7 +1,7 @@
 import { eq, asc } from 'drizzle-orm';
 import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
-import type { Game } from '../types/game';
+import type { Game, Category, Publisher } from '../types/game';
 
 const gameSelection = {
     id: games.id,
@@ -50,20 +50,59 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
-/** All games ordered by title. */
+/**
+ * Returns all games ordered by title, with joined category and publisher data.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @returns A title-sorted list of fully-hydrated game objects.
+ */
 export async function getAllGames(db: Database): Promise<Game[]> {
     const rows = await baseGamesQuery(db).orderBy(asc(games.title));
     return rows.map(mapGame);
 }
 
-/** All game ids ordered by title. */
+/**
+ * Returns all game ids ordered by title for deterministic static path generation.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @returns A title-sorted list of game ids.
+ */
 export async function getAllGameIds(db: Database): Promise<number[]> {
     const rows = await db.select({ id: games.id }).from(games).orderBy(asc(games.title));
     return rows.map((row) => row.id);
 }
 
-/** A single game by id, or null when it does not exist. */
+/**
+ * Fetches a single game by its id.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @param id The numeric primary key of the game.
+ * @returns The game with its category and publisher, or null if it does not exist.
+ */
 export async function getGameById(db: Database, id: number): Promise<Game | null> {
     const rows = await baseGamesQuery(db).where(eq(games.id, id)).limit(1);
     return rows.length > 0 ? mapGame(rows[0]) : null;
+}
+
+/**
+ * Returns all distinct categories ordered by name.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @returns A name-sorted list of categories.
+ */
+export async function getAllCategories(db: Database): Promise<Category[]> {
+    const rows = await db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .orderBy(asc(categories.name));
+    return rows.map((row) => ({ id: row.id, name: row.name }));
+}
+
+/**
+ * Returns all distinct publishers ordered by name.
+ * @param db Drizzle database instance (injectable for tests and production use).
+ * @returns A name-sorted list of publishers.
+ */
+export async function getAllPublishers(db: Database): Promise<Publisher[]> {
+    const rows = await db
+        .select({ id: publishers.id, name: publishers.name })
+        .from(publishers)
+        .orderBy(asc(publishers.name));
+    return rows.map((row) => ({ id: row.id, name: row.name }));
 }
